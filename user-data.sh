@@ -67,16 +67,19 @@ for URL in "${URLS[@]}"; do
     HTTP_STATUS="${RESPONSE: -3}"
     CONTENT="${RESPONSE:0: -3}"
 
-  # Check if the HTTP status is 200
-  if [ "$HTTP_STATUS" -eq 200 ]; then
-    # Append the content to the combined content variable
-    COMBINED_CONTENT+="${CONTENT}"
-    COMBINED_CONTENT+=$'\n\n'
-  else
-    echo "Failed to download content from ${URL}/${DISTRO,,}."
-    echo "HTTP status code: ${HTTP_STATUS}"
-    continue
-  fi
+    # Check if the HTTP status is 200
+    if [ "$HTTP_STATUS" -eq 000 ]; then
+        echo "Unable to connect to ${URL}"
+        continue
+    elif [ "$HTTP_STATUS" -eq 200 ]; then
+        # Append the content to the combined content variable
+        COMBINED_CONTENT+="${CONTENT}"
+        COMBINED_CONTENT+=$'\n\n'
+    else
+        echo "Failed to download content from ${URL}/${DISTRO,,}"
+        echo "HTTP status code: ${HTTP_STATUS}"
+        continue
+    fi
 
 
     unset HTTP_STATUS
@@ -88,15 +91,19 @@ for URL in "${URLS[@]}"; do
     HTTP_STATUS="${RESPONSE: -3}"
     CONTENT="${RESPONSE:0: -3}"
 
-  # Check if the HTTP status is 200
-  if [ "$HTTP_STATUS" -eq 200 ]; then
-    # Append the content to the combined content variable
-    COMBINED_CONTENT+="${CONTENT}"
-    COMBINED_CONTENT+=$'\n'
-  else
-    echo "Failed to download content from ${URL}/${DISTRO,,}_${SUITE,,}."
-    echo "HTTP status code: ${HTTP_STATUS}"
-  fi
+    # Check if the HTTP status is 200
+    if [ "$HTTP_STATUS" -eq 000 ]; then
+        echo "Unable to connect to ${URL}"
+        continue
+    elif [ "$HTTP_STATUS" -eq 200 ]; then
+        # Append the content to the combined content variable
+        COMBINED_CONTENT+="${CONTENT}"
+        COMBINED_CONTENT+=$'\n\n'
+    else
+        echo "Failed to download content from ${URL}/${DISTRO,,}_${SUITE,,}"
+        echo "HTTP status code: ${HTTP_STATUS}"
+        continue
+    fi
 
 
 
@@ -105,20 +112,23 @@ for URL in "${URLS[@]}"; do
     unset CONTENT
 
     # Fetch the content and HTTP status code using curl
-    RESPONSE=$(curl -s -o - -w "%{http_code}" "${URL}/distro/${DISTRO,,}_${SUITE,,}_${ARCH,,}")
+    RESPONSE=$(curl -s -o - -w "%{http_code}" "${URL}/${DISTRO,,}_${SUITE,,}_${ARCH,,}")
     HTTP_STATUS="${RESPONSE: -3}"
     CONTENT="${RESPONSE:0: -3}"
 
-  # Check if the HTTP status is 200
-  if [ "$HTTP_STATUS" -eq 200 ]; then
-    # Append the content to the combined content variable
-    COMBINED_CONTENT+="${CONTENT}"
-    COMBINED_CONTENT+=$'\n'
-  else
-    echo "Failed to download content from ${URL}/distro/${DISTRO,,}_${SUITE,,}_${ARCH,,}. HTTP status code: $HTTP_STATUS" >&2
-    continue
-  fi
-
+    # Check if the HTTP status is 200
+    if [ "$HTTP_STATUS" -eq 000 ]; then
+        echo "Unable to connect to ${URL}"
+        continue
+    elif [ "$HTTP_STATUS" -eq 200 ]; then
+        # Append the content to the combined content variable
+        COMBINED_CONTENT+="${CONTENT}"
+        COMBINED_CONTENT+=$'\n\n'
+    else
+        echo "Failed to download content from ${DISTRO,,}_${SUITE,,}_${ARCH,,}"
+        echo "HTTP status code: ${HTTP_STATUS}"
+        continue
+    fi
 
 done
 
