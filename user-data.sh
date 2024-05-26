@@ -1,6 +1,6 @@
 #!/bin/bash
 
-HOSTS=("repo.internal" "192.168.1.23:9000" "raw.githubusercontent.com/vinnyw/user-data/master")
+URLS=("http://repo.internal" "http://192.168.1.23:9000" "https://raw.githubusercontent.com/vinnyw/user-data/master")
 
 
 ##############################
@@ -46,11 +46,72 @@ else
 
 fi
 
+# set 
+COMBINED='#!/bin/bash\n\n'
 
 ##############################
 #
 #   FIND HOSTS
 #
+
+
+# Loop through each URL and concatenate the content
+for URL in "${URLS[@]}"; do
+
+  # Fetch the content and HTTP status code using curl
+  RESPONSE=$(curl -s -o - -w "%{http_code}" "${URL}/distro/${DISTRO,,}")
+  HTTP_STATUS="${RESPONSE: -3}"
+  CONTENT="${RESPONSE:0: -3}"
+
+  # Check if the HTTP status is 200
+  if [ "$HTTP_STATUS" -eq 200 ]; then
+    # Append the content to the combined content variable
+    COMBINED_CONTENT+="${CONTENT}"
+    COMBINED_CONTENT+=$'\n'
+  else
+    echo "Failed to download content from ${URL}/distro/${DISTRO,,}. HTTP status code: $HTTP_STATUS" >&2
+    continue
+  fi
+
+
+  # Fetch the content and HTTP status code using curl
+  RESPONSE=$(curl -s -o - -w "%{http_code}" "${URL}/distro/${DISTRO,,}_${SUITE,,}")
+  HTTP_STATUS="${RESPONSE: -3}"
+  CONTENT="${RESPONSE:0: -3}"
+
+  # Check if the HTTP status is 200
+  if [ "$HTTP_STATUS" -eq 200 ]; then
+    # Append the content to the combined content variable
+    COMBINED_CONTENT+="${CONTENT}"
+    COMBINED_CONTENT+=$'\n'
+  else
+    echo "Failed to download content from ${URL}/distro/${DISTRO,,}_${SUITE,,}. HTTP status code: $HTTP_STATUS" >&2
+    continue
+  fi
+
+
+  # Fetch the content and HTTP status code using curl
+  RESPONSE=$(curl -s -o - -w "%{http_code}" "${URL}/distro/${DISTRO,,}_${SUITE,,}_${ARCH,,}")
+  HTTP_STATUS="${RESPONSE: -3}"
+  CONTENT="${RESPONSE:0: -3}"
+
+  # Check if the HTTP status is 200
+  if [ "$HTTP_STATUS" -eq 200 ]; then
+    # Append the content to the combined content variable
+    COMBINED_CONTENT+="${CONTENT}"
+    COMBINED_CONTENT+=$'\n'
+  else
+    echo "Failed to download content from ${URL}/distro/${DISTRO}_${SUITE}_${ARCH}. HTTP status code: $HTTP_STATUS" >&2
+    continue
+  fi
+
+
+done
+
+
+
+echo $COMBINED_CONTENT
+
 
 ##
 #
