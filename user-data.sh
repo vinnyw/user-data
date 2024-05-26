@@ -1,7 +1,7 @@
 #!/bin/bash
 
-URLS=("http://repo.internal" "http://192.168.1.23:9000" "https://raw.githubusercontent.com/vinnyw/user-data/master")
-
+URLS=("repo.internal" "192.168.1.23:9000" "raw.githubusercontent.com/vinnyw/user-data/master")
+PROTOS=("https" "http")
 
 ##############################
 #
@@ -21,7 +21,7 @@ if cat "/etc/issue" | grep -qF 'Ubuntu'; then
     # capture valutes
     export DISTRO=$( lsb_release -s -i 2>/dev/null)
     export SUITE=$( lsb_release -s -c 2>/dev/null)
-    export SUITE="jammy"
+    export SUITE="focal"
     export ARCH=$(dpkg --print-architecture 2>/dev/null)
 
 # debian type
@@ -48,7 +48,6 @@ else
 fi
 
 # set 
-COMBINED='#!/bin/bash\n\n'
 
 ##############################
 #
@@ -56,94 +55,82 @@ COMBINED='#!/bin/bash\n\n'
 #
 
 # Loop through each URL and concatenate the content
+
+
 for URL in "${URLS[@]}"; do
 
-    unset HTTP_STATUS
-    unset RESPONSE
-    unset CONTENT
+    for PROTO in "${PROTOS[@]}"; do
 
-    # Fetch the content and HTTP status code using curl
-    RESPONSE=$(curl -s -o - -w "%{http_code}" "${URL}/distro/${DISTRO,,}")
-    HTTP_STATUS="${RESPONSE: -3}"
-    CONTENT="${RESPONSE:0: -3}"
+        for FETCH in ${DISTRO,,} ${DISTRO,,}_${SUITE,,} ${DISTRO,,}_${SUITE,,}_${ARCH,,}; do
 
-    # Check if the HTTP status is 200
-    if [ "$HTTP_STATUS" -eq 000 ]; then
-        echo "Unable to connect to ${URL}"
-        continue
-    elif [ "$HTTP_STATUS" -eq 200 ]; then
-        # Append the content to the combined content variable
-        COMBINED_CONTENT+="${CONTENT}"
-        COMBINED_CONTENT+=$'\n\n'
-    else
-        echo "Failed to download content from ${URL}/${DISTRO,,}"
-        echo "HTTP status code: ${HTTP_STATUS}"
-        continue
-    fi
+            unset HTTP_STATUS
+            unset RESPONSE
+            unset CONTENT
 
+            # Fetch the content and HTTP status code using curl
+            RESPONSE=$(curl --silent --connect-timeout 2 -o - -w "%{http_code}" "${PROTO}://${URL}/${FETCH,,}")
+            HTTP_STATUS="${RESPONSE: -3}"
+            CONTENT="${RESPONSE:0: -3}"
 
-    unset HTTP_STATUS
-    unset RESPONSE
-    unset CONTENT
+            # Check if the HTTP status is 200
+            if [ "$HTTP_STATUS" -eq 000 ]; then
+                echo "Unable to connect to ${PROTO}://${URL}"
+                break
+            elif [ "$HTTP_STATUS" -eq 200 ]; then
+                echo "Fetched content from ${PROTO}://${URL}/${FETCH,,} (${HTTP_STATUS})"
+                COMBINED+="${CONTENT}"
+                COMBINED+=$'\n\n'
+                export HASOK=1
+            else
+                echo "Skipped content from ${PROTO}://${URL}/${FETCH,,} (${HTTP_STATUS})"
+                continue
+            fi
 
-    # Fetch the content and HTTP status code using curl
-    RESPONSE=$(curl -s -o - -w "%{http_code}" "${URL}/${DISTRO,,}_${SUITE,,}")
-    HTTP_STATUS="${RESPONSE: -3}"
-    CONTENT="${RESPONSE:0: -3}"
+        done
+        if [[ $HASOK -eq 1 ]]; then
+        break
+        fi
 
-    # Check if the HTTP status is 200
-    if [ "$HTTP_STATUS" -eq 000 ]; then
-        echo "Unable to connect to ${URL}"
-        continue
-    elif [ "$HTTP_STATUS" -eq 200 ]; then
-        # Append the content to the combined content variable
-        COMBINED_CONTENT+="${CONTENT}"
-        COMBINED_CONTENT+=$'\n\n'
-    else
-        echo "Failed to download content from ${URL}/${DISTRO,,}_${SUITE,,}"
-        echo "HTTP status code: ${HTTP_STATUS}"
-        continue
-    fi
-
-
-
-    unset HTTP_STATUS
-    unset RESPONSE
-    unset CONTENT
-
-    # Fetch the content and HTTP status code using curl
-    RESPONSE=$(curl -s -o - -w "%{http_code}" "${URL}/${DISTRO,,}_${SUITE,,}_${ARCH,,}")
-    HTTP_STATUS="${RESPONSE: -3}"
-    CONTENT="${RESPONSE:0: -3}"
-
-    # Check if the HTTP status is 200
-    if [ "$HTTP_STATUS" -eq 000 ]; then
-        echo "Unable to connect to ${URL}"
-        continue
-    elif [ "$HTTP_STATUS" -eq 200 ]; then
-        # Append the content to the combined content variable
-        COMBINED_CONTENT+="${CONTENT}"
-        COMBINED_CONTENT+=$'\n\n'
-    else
-        echo "Failed to download content from ${DISTRO,,}_${SUITE,,}_${ARCH,,}"
-        echo "HTTP status code: ${HTTP_STATUS}"
-        continue
-    fi
+    done
 
 done
 
 
-
-echo $COMBINED_CONTENT
-
-
-##
+##############################
 #
-#    for each host in array 
-#       do loop
-#       check https (wget --timeout=seconds URL)
-        # try host/distro/suite_arch host/distro/suite  
-        #    if 404 recieved then try next less specific   
-#       if unable to connect try http
-#       if unable to connect then try next in loop
-#   
+#   BUILD COMBINED SCRIPT
+#
+
+cat <<EOF
+#!/bin/bash
+
+##############################
+#
+#   LOCK
+#
+
+sudo -E apt-get -qy install lsb-release coreutils
+sudo touch /run/nologin
+lsb_release -d -s | sudo -E tee --append /run/nologin
+echo "System is booting up for the first time. Unprivileged users are not permitted to log in at this time." | sudo -E tee --append /run/nologin
+
+
+${COMBINED}
+
+
+##############################
+#
+#   UNLOCK
+#
+
+[ -e /run/nologin ] && sudo rm -f /run/nologin 2>/dev/null
+[ -e /var/run/reboot-required ] && sudo reboot
+
+EOF
+
+
+##############################
+#
+#   EXIT
+#
+exit 0
