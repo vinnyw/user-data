@@ -21,6 +21,7 @@ if cat "/etc/issue" | grep -qF 'Ubuntu'; then
     # capture valutes
     export DISTRO=$( lsb_release -s -i 2>/dev/null)
     export SUITE=$( lsb_release -s -c 2>/dev/null)
+    export SUITE="jammy"
     export ARCH=$(dpkg --print-architecture 2>/dev/null)
 
 # debian type
@@ -54,30 +55,38 @@ COMBINED='#!/bin/bash\n\n'
 #   FIND HOSTS
 #
 
-
 # Loop through each URL and concatenate the content
 for URL in "${URLS[@]}"; do
 
-  # Fetch the content and HTTP status code using curl
-  RESPONSE=$(curl -s -o - -w "%{http_code}" "${URL}/distro/${DISTRO,,}")
-  HTTP_STATUS="${RESPONSE: -3}"
-  CONTENT="${RESPONSE:0: -3}"
+    unset HTTP_STATUS
+    unset RESPONSE
+    unset CONTENT
+
+    # Fetch the content and HTTP status code using curl
+    RESPONSE=$(curl -s -o - -w "%{http_code}" "${URL}/distro/${DISTRO,,}")
+    HTTP_STATUS="${RESPONSE: -3}"
+    CONTENT="${RESPONSE:0: -3}"
 
   # Check if the HTTP status is 200
   if [ "$HTTP_STATUS" -eq 200 ]; then
     # Append the content to the combined content variable
     COMBINED_CONTENT+="${CONTENT}"
-    COMBINED_CONTENT+=$'\n'
+    COMBINED_CONTENT+=$'\n\n'
   else
-    echo "Failed to download content from ${URL}/distro/${DISTRO,,}. HTTP status code: $HTTP_STATUS" >&2
+    echo "Failed to download content from ${URL}/${DISTRO,,}."
+    echo "HTTP status code: ${HTTP_STATUS}"
     continue
   fi
 
 
-  # Fetch the content and HTTP status code using curl
-  RESPONSE=$(curl -s -o - -w "%{http_code}" "${URL}/distro/${DISTRO,,}_${SUITE,,}")
-  HTTP_STATUS="${RESPONSE: -3}"
-  CONTENT="${RESPONSE:0: -3}"
+    unset HTTP_STATUS
+    unset RESPONSE
+    unset CONTENT
+
+    # Fetch the content and HTTP status code using curl
+    RESPONSE=$(curl -s -o - -w "%{http_code}" "${URL}/${DISTRO,,}_${SUITE,,}")
+    HTTP_STATUS="${RESPONSE: -3}"
+    CONTENT="${RESPONSE:0: -3}"
 
   # Check if the HTTP status is 200
   if [ "$HTTP_STATUS" -eq 200 ]; then
@@ -85,15 +94,20 @@ for URL in "${URLS[@]}"; do
     COMBINED_CONTENT+="${CONTENT}"
     COMBINED_CONTENT+=$'\n'
   else
-    echo "Failed to download content from ${URL}/distro/${DISTRO,,}_${SUITE,,}. HTTP status code: $HTTP_STATUS" >&2
-    continue
+    echo "Failed to download content from ${URL}/${DISTRO,,}_${SUITE,,}."
+    echo "HTTP status code: ${HTTP_STATUS}"
   fi
 
 
-  # Fetch the content and HTTP status code using curl
-  RESPONSE=$(curl -s -o - -w "%{http_code}" "${URL}/distro/${DISTRO,,}_${SUITE,,}_${ARCH,,}")
-  HTTP_STATUS="${RESPONSE: -3}"
-  CONTENT="${RESPONSE:0: -3}"
+
+    unset HTTP_STATUS
+    unset RESPONSE
+    unset CONTENT
+
+    # Fetch the content and HTTP status code using curl
+    RESPONSE=$(curl -s -o - -w "%{http_code}" "${URL}/distro/${DISTRO,,}_${SUITE,,}_${ARCH,,}")
+    HTTP_STATUS="${RESPONSE: -3}"
+    CONTENT="${RESPONSE:0: -3}"
 
   # Check if the HTTP status is 200
   if [ "$HTTP_STATUS" -eq 200 ]; then
@@ -101,7 +115,7 @@ for URL in "${URLS[@]}"; do
     COMBINED_CONTENT+="${CONTENT}"
     COMBINED_CONTENT+=$'\n'
   else
-    echo "Failed to download content from ${URL}/distro/${DISTRO}_${SUITE}_${ARCH}. HTTP status code: $HTTP_STATUS" >&2
+    echo "Failed to download content from ${URL}/distro/${DISTRO,,}_${SUITE,,}_${ARCH,,}. HTTP status code: $HTTP_STATUS" >&2
     continue
   fi
 
