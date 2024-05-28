@@ -68,7 +68,7 @@ for URL in "${URLS[@]}"; do
             unset CONTENT
 
             # Fetch the content and HTTP status code using curl
-            RESPONSE=$(curl --silent --connect-timeout 2 -o - -w "%{http_code}" "${PROTO}://${URL}/${FETCH,,}")
+            RESPONSE=$(curl --silent --connect-timeout 2 -o - -w "%{http_code}" "${PROTO}://${URL}/scripts/${FETCH,,}")
             HTTP_STATUS="${RESPONSE: -3}"
             CONTENT="${RESPONSE:0: -3}"
 
@@ -77,18 +77,19 @@ for URL in "${URLS[@]}"; do
                 echo "Unable to connect to ${PROTO}://${URL}"
                 break
             elif [ "$HTTP_STATUS" -eq 200 ]; then
-                echo "Fetched content from ${PROTO}://${URL}/${FETCH,,} (${HTTP_STATUS})"
+                echo "Fetched content from ${PROTO}://${URL}/scripts/${FETCH,,} (${HTTP_STATUS})"
                 COMBINED+="${CONTENT}"
                 COMBINED+=$'\n\n'
                 export HASOK=1
             else
-                echo "Skipped content from ${PROTO}://${URL}/${FETCH,,} (${HTTP_STATUS})"
+                echo "Skipped content from ${PROTO}://${URL}/scripts/${FETCH,,} (${HTTP_STATUS})"
                 continue
             fi
 
         done
+
         if [[ $HASOK -eq 1 ]]; then
-        break
+            break
         fi
 
     done
